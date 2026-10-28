@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solar Tracker — ESP32 IoT Dashboard</title>
+  <link rel="stylesheet" href="styles.css?v=16">
+</head>
+<body>
+
+<!-- ==================== LOGIN GATE ==================== -->
+<div id="loginGate" class="gate">
+  <form id="loginForm" class="gate-card" autocomplete="off">
+    <div class="gate-sun">☀</div>
+    <h1>Solar Tracker</h1>
+    <div class="sub">Đăng nhập để xem bảng điều khiển</div>
+    <label class="field"><span>Tên đăng nhập</span><input id="lgUser" type="text" placeholder="user" autocomplete="username"></label>
+    <label class="field"><span>Mật khẩu</span><input id="lgPass" type="password" placeholder="pass" autocomplete="current-password"></label>
+    <button class="apply" type="submit">Đăng nhập</button>
+    <div id="lgErr" class="gate-err" hidden>Sai tên đăng nhập hoặc mật khẩu.</div>
+  </form>
+</div>
+
+<!-- ==================== APP ==================== -->
+<div class="wrap" id="app" hidden>
+
+  <!-- HEADER -->
+  <div class="card head">
+    <div class="head-l">
+      <span class="sun">☀</span>
+      <div>
+        <h1>Solar Tracker</h1>
+        <div class="sub"><span id="hdrClock">--:--:--</span> · ESP32 IoT Dashboard</div>
+      </div>
+    </div>
+    <div class="head-r">
+      <span id="hdrPill" class="pill off">○ MẤT KẾT NỐI</span>
+      <span class="wifi">📶<b id="hdrRssi">--</b></span>
+      <button id="btnTheme" class="chip icon" title="Đổi giao diện sáng / tối">🌙</button>
+      <button id="btnLogout" class="chip icon" title="Đăng xuất">⎋</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <nav class="tabs">
+    <button class="tab on" data-tab="ov">Tổng quan</button>
+    <button class="tab" data-tab="ctl">Điều khiển</button>
+    <button class="tab" data-tab="an">Phân tích</button>
+    <button class="tab" data-tab="hi">Lịch sử</button>
+  </nav>
+
+  <!-- ==================== TAB: TỔNG QUAN ==================== -->
+  <section id="tab-ov" class="tabpage">
+
+    <div class="grid c3">
+      <div class="card">
+        <h2><span class="ico g">☀</span> Tấm pin mặt trời</h2>
+        <div class="kpi"><span>Điện áp</span><b id="sV">-- V</b></div>
+        <div class="kpi"><span>Dòng điện</span><b id="sI">-- A</b></div>
+        <div class="kpi"><span>Công suất</span><b id="sP">-- W</b></div>
+        <div class="kpi"><span>Năng lượng</span><b id="sE">-- Wh</b></div>
+        <div class="kpi"><span>Cảm biến INA219</span><b id="sOk" class="badge">--</b></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="ico g">🔋</span> Pin lưu trữ</h2>
+        <div class="kpi"><span>Điện áp</span><b id="bV">-- V</b></div>
+        <div class="kpi"><span>Dung lượng</span><b id="bPct">-- %</b></div>
+        <div class="bar"><i id="bBar"></i></div>
+        <div class="kpi"><span>Dòng sạc / xả</span><b id="bI">-- A</b></div>
+        <div class="kpi"><span>Đang sạc</span><b id="bStatus" class="badge">--</b></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="ico c">⚙</span> Thiết bị</h2>
+        <div class="kpi"><span>Trạng thái</span><b id="dStatus">--</b></div>
+        <div class="kpi"><span>Uptime</span><b id="dUp">--</b></div>
+        <div class="kpi"><span>Góc xoay (Az — ngang)</span><b id="pAz">--°</b></div>
+        <div class="kpi"><span>Góc nghiêng (El — dọc)</span><b id="pEl">--°</b></div>
+        <div class="kpi"><span>Cập nhật cuối</span><b id="dUpd">--</b></div>
+      </div>
+    </div>
+
+    <div class="grid c-1-2">
+      <div class="card radar-card">
+        <h2><span class="ico c">🧭</span> Ra-đa ánh sáng</h2>
+        <canvas id="radar"></canvas>
+        <div id="dirLabel" class="dirlbl">Chưa có dữ liệu</div>
+      </div>
+      <div class="card">
+        <h2>Dữ liệu LDR (0 – 4095)</h2>
+        <div class="ldrrow">
+          <div class="ldr"><span>LDR1</span><i><b id="b1"></b></i><u id="v1">0</u></div>
+          <div class="ldr"><span>LDR2</span><i><b id="b2"></b></i><u id="v2">0</u></div>
+          <div class="ldr"><span>LDR3</span><i><b id="b3"></b></i><u id="v3">0</u></div>
+          <div class="ldr"><span>LDR4</span><i><b id="b4"></b></i><u id="v4">0</u></div>
+        </div>
+        <div class="sep"></div>
+        <div class="kpi"><span>Chênh lệch max – min</span><b id="ldrDelta">--</b></div>
+        <div class="kpi"><span>Hướng sáng</span><b id="dirLabel2">--</b></div>
+        <div class="hint">LDR1 dưới‑trái · LDR2 trên‑trái · LDR3 trên‑phải · LDR4 dưới‑phải</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="chart-h">
+        <h2>Đồ thị theo thời gian</h2>
+        <div class="btnrow" id="metricChips">
+          <button class="chip on" data-m="sv">Điện áp panel</button>
+          <button class="chip" data-m="sp">Công suất</button>
+          <button class="chip" data-m="si">Dòng điện</button>
+          <button class="chip" data-m="bv">Điện áp pin</button>
+          <button class="chip" data-m="bp">Dung lượng pin</button>
+        </div>
+      </div>
+      <canvas id="chart" height="160"></canvas>
+      <div class="hint" id="chartHint">Đồ thị được nạp sẵn từ lịch sử ngay khi mở trang.</div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB: ĐIỀU KHIỂN ==================== -->
+  <section id="tab-ctl" class="tabpage" hidden>
+    <div class="card">
+      <div class="chart-h">
+        <h2><span class="ico c">🎮</span> Điều khiển thủ công</h2>
+        <button id="btnManual" class="chip">Bật chế độ điều khiển thủ công</button>
+      </div>
+      <div id="manualBox" class="manual-box dim">
+        <div class="sld"><span>Trục xoay (ngang)</span><input type="range" id="sldAz" min="5" max="175" value="90" disabled><b id="azVal">90°</b></div>
+        <div class="sld"><span>Trục nghiêng (dọc)</span><input type="range" id="sldEl" min="30" max="150" value="90" disabled><b id="elVal">90°</b></div>
+        <div class="manual-row"><button id="btnReset" class="chip" disabled>↺ Đặt lại về 90°</button></div>
+        <div class="hint">Bật chế độ thủ công để kéo 2 thanh đưa servo tới góc mong muốn. Ở chế độ tự động, thiết bị bám nắng theo 4 cảm biến LDR.</div>
+      </div>
+      <div class="sep"></div>
+      <div class="ktiles">
+        <div class="ktile"><span>Chế độ</span><b id="ctlMode">--</b></div>
+        <div class="ktile"><span>Az đặt (ngang)</span><b id="ctlAz">--°</b></div>
+        <div class="ktile"><span>El đặt (dọc)</span><b id="ctlEl">--°</b></div>
+      </div>
+      <div class="sep"></div>
+      <div class="ktiles">
+        <div class="ktile wide"><span>Vị trí thực tế (telemetry)</span><b id="ctlReal">--</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB: PHÂN TÍCH ==================== -->
+  <section id="tab-an" class="tabpage" hidden>
+    <div class="card">
+      <div class="chart-h">
+        <h2><span class="ico c">📊</span> Phân tích hiệu quả sạc</h2>
+        <div class="btnrow" id="anChips">
+          <button class="chip on" data-range="today">Hôm nay</button>
+          <button class="chip" data-range="d7">7 ngày</button>
+          <button class="chip" data-range="d30">30 ngày</button>
+          <input type="date" id="anPick" class="chip date" title="Chọn ngày">
+        </div>
+      </div>
+      <div class="live"><b id="anLiveBadge">--</b><span id="anLiveDetail">--</span></div>
+    </div>
+
+    <div class="card">
+      <div id="anMsg" class="msg">Đang tải lịch sử…</div>
+      <div id="anBody" hidden>
+        <div class="score-row">
+          <div class="score-big"><b id="anScore">--</b><span>/100</span></div>
+          <div class="score-info">
+            <div id="anVerdict" class="verdict">--</div>
+            <div id="anSummary" class="sub">--</div>
+          </div>
+        </div>
+        <div class="bar scorebar"><i id="anScoreBar"></i></div>
+
+        <div class="grid c4">
+          <div class="metric"><span>Thời gian có nắng</span><b id="anSun">--</b><u id="anSunSub">--</u></div>
+          <div class="metric"><span>Thời gian sạc</span><b id="anCharge">--</b><u id="anChargeSub">--</u></div>
+          <div class="metric"><span>Pin tăng ròng</span><b id="anGain">--</b><u id="anGainSub">--</u></div>
+          <div class="metric"><span>Điện năng</span><b id="anEnergy">--</b><u id="anEnergySub">--</u></div>
+        </div>
+
+        <h2 class="mt">Năng lượng theo <span id="anBucketUnit">giờ</span></h2>
+        <canvas id="anBars" height="170"></canvas>
+        <div class="hint">Chạm / di chuột lên cột để xem giá trị.</div>
+
+        <div class="sep"></div>
+        <div class="kpi"><span>LDR bị che (trong giờ nắng)</span><b id="anLdr">--</b></div>
+        <div class="kpi"><span>Mất kết nối (trong giờ nắng)</span><b id="anOff">--</b></div>
+        <div class="kpi"><span>Số mốc dữ liệu</span><b id="anSamples">--</b></div>
+        <div class="kpi"><span>Công suất đỉnh</span><b id="anPeak">--</b></div>
+        <div class="kpi"><span>Khoảng đang xem</span><b id="anRange">--</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB: LỊCH SỬ ==================== -->
+  <section id="tab-hi" class="tabpage" hidden>
+    <div class="card">
+      <div class="chart-h">
+        <h2><span class="ico c">🕓</span> Lịch sử (ESP32 ghi 1 mốc / phút)</h2>
+        <div class="btnrow" id="hiChips">
+          <button class="chip on" data-range="today">Hôm nay</button>
+          <button class="chip" data-range="d7">7 ngày</button>
+          <button class="chip" data-range="d30">30 ngày</button>
+          <input type="date" id="hiPick" class="chip date" title="Chọn ngày">
+          <button id="btnCsv" class="chip">⭳ CSV</button>
+        </div>
+      </div>
+      <div class="live"><b id="hiCount">--</b><span id="hiNote"></span></div>
+      <div class="hist-scroll">
+        <table class="hist">
+          <thead>
+            <tr>
+              <th rowspan="2">Thời gian</th>
+              <th colspan="4" class="grp">☀ Solar</th>
+              <th colspan="3" class="grp">🔋 Pin</th>
+              <th rowspan="2">LDR 1-4</th>
+              <th colspan="2" class="grp">🧭 Hướng</th>
+            </tr>
+            <tr>
+              <th>V</th><th>I</th><th>P</th><th>E</th>
+              <th>V</th><th>%</th><th>Status</th>
+              <th>Az</th><th>El</th>
+            </tr>
+          </thead>
+          <tbody id="histBody"><tr><td colspan="11" class="mut">Chưa có dữ liệu</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+  <script type="module" src="app.js?v=15"></script>
+</body>
+</html>

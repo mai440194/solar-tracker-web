@@ -1,0 +1,9 @@
+# Bản sao lưu khi sửa file
+*.bak
+*.orig
+
+# Hệ điều hành / editor
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
