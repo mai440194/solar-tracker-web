@@ -136,8 +136,6 @@ html[data-theme="light"] .apply{color:#fff}
 .score-big span{color:var(--mut);font-size:14px}
 .score-info{display:flex;flex-direction:column;gap:3px}
 .verdict{font-size:17px;font-weight:800}
-.scorebar{height:10px;margin:12px 0 16px}
-.scorebar i{background:linear-gradient(90deg,var(--c),var(--g))}
 .metric{background:var(--field);border:1px solid var(--line);border-radius:12px;padding:10px 12px;
 display:flex;flex-direction:column;gap:2px}
 .metric span{color:var(--mut);font-size:11.5px}

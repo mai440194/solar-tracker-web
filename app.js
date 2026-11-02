@@ -754,7 +754,6 @@ async function loadAnalysis() {
 function renderAnalysis(A, rg) {
   const sc = A.score < 0 ? -1 : Math.round(A.score);
   $("anScore").textContent = sc < 0 ? "--" : sc;
-  $("anScoreBar").style.width = sc < 0 ? "0%" : clamp(sc, 0, 100) + "%";
 
   let verdict = "CHƯA ĐỦ DỮ LIỆU", color = "var(--mut)";
   if (sc >= 70) { verdict = "SẠC HIỆU QUẢ"; color = "var(--g)"; }
