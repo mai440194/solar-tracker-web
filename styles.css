@@ -134,7 +134,7 @@ html[data-theme="light"] .apply{color:#fff}
 display:flex;flex-direction:column;gap:2px}
 .metric span{color:var(--mut);font-size:11.5px}
 .metric b{font-size:17px}
-.metric u{text-decoration:none;color:var(--mut);font-size:11.5px}
+
 
 /* ---------- HISTORY TABLE ---------- */
 .hist-scroll{max-height:460px;overflow:auto;margin-top:6px}

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Solar Tracker — ESP32 IoT Dashboard</title>
-  <link rel="stylesheet" href="styles.css?v=18">
+  <link rel="stylesheet" href="styles.css?v=20">
 </head>
 <body>
 
@@ -98,7 +98,6 @@
         <div class="sep"></div>
         <div class="kpi"><span>Chênh lệch max – min</span><b id="ldrDelta">--</b></div>
         <div class="kpi"><span>Hướng sáng</span><b id="dirLabel2">--</b></div>
-        <div class="hint">LDR1 dưới‑trái · LDR2 trên‑trái · LDR3 trên‑phải · LDR4 dưới‑phải</div>
       </div>
     </div>
 
@@ -114,7 +113,7 @@
         </div>
       </div>
       <canvas id="chart" height="160"></canvas>
-      <div class="hint" id="chartHint">Đồ thị được nạp sẵn từ lịch sử ngay khi mở trang.</div>
+      <div class="hint">Nạp sẵn 8 giờ gần nhất</div>
     </div>
   </section>
 
@@ -129,7 +128,6 @@
         <div class="sld"><span>Trục xoay (ngang)</span><input type="range" id="sldAz" min="5" max="175" value="90" disabled><b id="azVal">90°</b></div>
         <div class="sld"><span>Trục nghiêng (dọc)</span><input type="range" id="sldEl" min="30" max="150" value="90" disabled><b id="elVal">90°</b></div>
         <div class="manual-row"><button id="btnReset" class="chip" disabled>↺ Đặt lại về 90°</button></div>
-        <div class="hint">Bật chế độ thủ công để kéo 2 thanh đưa servo tới góc mong muốn. Ở chế độ tự động, thiết bị bám nắng theo 4 cảm biến LDR.</div>
       </div>
       <div class="sep"></div>
       <div class="ktiles">
@@ -163,15 +161,14 @@
       <div id="anMsg" class="msg">Đang tải lịch sử…</div>
       <div id="anBody" hidden>
         <div class="grid c4">
-          <div class="metric"><span>Thời gian có nắng</span><b id="anSun">--</b><u id="anSunSub">--</u></div>
-          <div class="metric"><span>Thời gian sạc</span><b id="anCharge">--</b><u id="anChargeSub">--</u></div>
-          <div class="metric"><span>Pin tăng ròng</span><b id="anGain">--</b><u id="anGainSub">--</u></div>
-          <div class="metric"><span>Điện năng</span><b id="anEnergy">--</b><u id="anEnergySub">--</u></div>
+          <div class="metric"><span>Thời gian có nắng</span><b id="anSun">--</b></div>
+          <div class="metric"><span>Thời gian sạc</span><b id="anCharge">--</b></div>
+          <div class="metric"><span>Pin tăng ròng</span><b id="anGain">--</b></div>
+          <div class="metric"><span>Điện năng</span><b id="anEnergy">--</b></div>
         </div>
 
         <h2 class="mt">Năng lượng theo <span id="anBucketUnit">giờ</span></h2>
         <canvas id="anBars" height="170"></canvas>
-        <div class="hint">Chạm / di chuột lên cột để xem giá trị.</div>
 
         <div class="sep"></div>
         <div class="kpi"><span>LDR bị che (trong giờ nắng)</span><b id="anLdr">--</b></div>
@@ -220,6 +217,6 @@
   </section>
 </div>
 
-  <script type="module" src="app.js?v=17"></script>
+  <script type="module" src="app.js?v=18"></script>
 </body>
 </html>

@@ -442,7 +442,6 @@ async function seedChart() {
     const rows = await fetchRows(now - 8 * 3600e3, now, 400);
     buf.length = 0;
     for (const r of rows) buf.push({ t: r.ts, sv: r.solarV, si: r.solarI, sp: r.power, bv: r.batV, bp: r.batPct });
-    if (buf.length) $("chartHint").textContent = `Đã nạp ${buf.length} mốc lịch sử gần nhất (8 giờ), sau đó nối tiếp realtime.`;
     drawChart();
   } catch (e) { console.warn("seed chart", e); }
 }
@@ -753,19 +752,13 @@ async function loadAnalysis() {
 
 function renderAnalysis(A, rg) {
   $("anSun").textContent = dur(A.sunMs);
-  $("anSunSub").textContent = `trong ${dur(A.dayMs)} ban ngày (07:00–17:00)`;
 
   $("anCharge").textContent = dur(A.chgMs);
-  $("anChargeSub").textContent = A.eligMs > 0
-    ? `${Math.round((A.chgMs / A.eligMs) * 100)}% thời gian lẽ ra phải sạc`
-    : "không có thời gian đủ điều kiện sạc";
 
   const g = A.gain;
   $("anGain").textContent = (g >= 0 ? "+" : "") + g.toFixed(0) + " %";
-  $("anGainSub").textContent = `điểm số pin tăng ròng`;
 
   $("anEnergy").textContent = A.energyWh.toFixed(1) + " Wh";
-  $("anEnergySub").textContent = `đỉnh ${A.peak.toFixed(1)} W · TB ${A.avgMw.toFixed(0)} mW khi sạc`;
 
   $("anLdr").textContent = dur(A.ldrMs);
   $("anOff").textContent = dur(A.offMs) + (A.offDayMs > 0 ? ` (${dur(A.offDayMs)} ban ngày)` : "");
