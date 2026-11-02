@@ -411,6 +411,7 @@ function drawRadar() {
 
   const cx = side / 2, cy = side / 2;
   const ringR = side * 0.40, anchor = ringR * 0.70;
+  const fs = Math.max(9, side * 0.05);
   const cLine = cssv("--line"), cMut = cssv("--mut"), cCard = cssv("--card");
 
   // nền
@@ -422,6 +423,18 @@ function drawRadar() {
   const rr = side * 0.07;
   roundRect(ctx, 0, 0, side, side, rr);
   ctx.fill();
+
+  // 4 nhãn hướng + màu nền tại đúng chỗ đặt nhãn (để làm quầng che chữ thập)
+  const bgAt = (x, y) => {
+    const d = ctx.getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data;
+    return "rgb(" + d[0] + "," + d[1] + "," + d[2] + ")";
+  };
+  const compass = [
+    { t: "BẮC", x: cx, y: cy - ringR + fs * 0.9 },
+    { t: "NAM", x: cx, y: cy + ringR - fs * 0.9 },
+    { t: "TÂY", x: cx - ringR + fs * 1.7, y: cy },
+    { t: "ĐÔNG", x: cx + ringR - fs * 1.7, y: cy },
+  ].map((o) => Object.assign(o, { bg: bgAt(o.x, o.y) }));
 
   // 3 vòng
   [1, 0.70, 0.35].forEach((k, i) => {
@@ -451,14 +464,15 @@ function drawRadar() {
   ctx.restore();
 
   // nhãn hướng
-  const fs = Math.max(9, side * 0.05);
   ctx.fillStyle = cMut;
   ctx.font = `600 ${fs}px "Segoe UI",system-ui,sans-serif`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("BẮC", cx, cy - ringR + fs * 0.9);
-  ctx.fillText("NAM", cx, cy + ringR - fs * 0.9);
-  ctx.fillText("T", cx - ringR + fs * 0.9, cy);
-  ctx.fillText("Đ", cx + ringR - fs * 0.9, cy);
+  ctx.lineWidth = 3; ctx.lineJoin = "round";
+  for (const o of compass) {
+    ctx.strokeStyle = o.bg;
+    ctx.strokeText(o.t, o.x, o.y);
+    ctx.fillText(o.t, o.x, o.y);
+  }
 
   // 4 marker LDR
   const mr = side * 0.042;
