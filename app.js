@@ -752,20 +752,6 @@ async function loadAnalysis() {
 }
 
 function renderAnalysis(A, rg) {
-  const sc = A.score < 0 ? -1 : Math.round(A.score);
-  $("anScore").textContent = sc < 0 ? "--" : sc;
-
-  let verdict = "CHƯA ĐỦ DỮ LIỆU", color = "var(--mut)";
-  if (sc >= 70) { verdict = "SẠC HIỆU QUẢ"; color = "var(--g)"; }
-  else if (sc >= 40) { verdict = "SẠC TRUNG BÌNH"; color = "var(--a)"; }
-  else if (sc >= 0) { verdict = "SẠC KÉM"; color = "var(--r)"; }
-  const vEl = $("anVerdict");
-  vEl.textContent = verdict;
-  vEl.style.color = color;
-
-  $("anSummary").textContent =
-    `${A.samples} mốc · ${dur(A.span)} · pin ${A.pctFirst.toFixed(0)}% → ${A.pctLast.toFixed(0)}%`;
-
   $("anSun").textContent = dur(A.sunMs);
   $("anSunSub").textContent = `trong ${dur(A.dayMs)} ban ngày (07:00–17:00)`;
 

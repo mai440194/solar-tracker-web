@@ -130,12 +130,6 @@ html[data-theme="light"] .apply{color:#fff}
 .live b{padding:3px 10px;border-radius:99px;background:var(--field);color:var(--txt);font-size:12px}
 .msg{color:var(--mut);font-size:13px;padding:6px 0}
 .msg[hidden]{display:none}
-.score-row{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
-.score-big{display:flex;align-items:baseline;gap:4px}
-.score-big b{font-size:44px;font-weight:800;color:var(--g);line-height:1}
-.score-big span{color:var(--mut);font-size:14px}
-.score-info{display:flex;flex-direction:column;gap:3px}
-.verdict{font-size:17px;font-weight:800}
 .metric{background:var(--field);border:1px solid var(--line);border-radius:12px;padding:10px 12px;
 display:flex;flex-direction:column;gap:2px}
 .metric span{color:var(--mut);font-size:11.5px}
