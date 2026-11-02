@@ -51,6 +51,105 @@ const D = { device: {}, sensors: {}, solar: {}, battery: {}, position: {}, contr
 let started = false, lastSig = -1, sigAt = 0, t0 = Date.now();
 let curLight = null;
 
+// ---------------------------------------------------------------- % PIN (tính ở web)
+// % trên Firebase KHÔNG phải số đo trực tiếp: firmware suy nó từ điện áp pin qua bảng OCV.
+// Bảng OCV chỉ đúng khi pin KHÔNG TẢI, nhưng thực tế:
+//   • servo quay  -> sụt áp trên nội trở cell -> áp đọc thấp hơn OCV -> % thấp giả
+//   • đang sạc     -> áp bị kéo lên trên OCV     -> % cao giả
+// Nên web tự tính lại: chỉ lấy mẫu khi pin THẬT SỰ NGHỈ, lấy trung vị 60 s rồi chốt 1 số %,
+// giữa 2 lần nghỉ thì giữ nguyên -> không nhảy. Dữ liệu gốc (Lịch sử / CSV) không bị sửa.
+//
+// Bảng OCV giữ ĐÚNG như firmware solar_tracker.ino:251 để web và thiết bị ra cùng một số.
+const OCV_VT = [3.20, 3.40, 3.55, 3.62, 3.66, 3.70, 3.75, 3.80, 3.85, 3.92, 4.00, 4.10, 4.20];
+const OCV_PC = [0, 7, 15, 24, 32, 42, 52, 62, 70, 78, 85, 92, 100];
+
+function ocvPercent(blockV) {
+  const cell = clamp(blockV / 2, 3.20, 4.20); // pin 2S -> đổi về thang 1 cell của bảng
+  for (let i = 0; i < OCV_VT.length - 1; i++) {
+    if (cell <= OCV_VT[i + 1])
+      return OCV_PC[i] + (OCV_PC[i + 1] - OCV_PC[i]) * (cell - OCV_VT[i]) / (OCV_VT[i + 1] - OCV_VT[i]);
+  }
+  return 100;
+}
+
+// Trạng thái servo ĐỨNG YÊN (không rút dòng) — chỉ những lúc này áp mới gần OCV
+const REST_STATUS = { Aligned: 1, Night: 1, Zenith: 1, Held: 1 };
+
+const BAT = {
+  needMs: 60000,      // phải nghỉ liên tục >= 60 s mới đủ tin để chốt
+  acc: [],            // mẫu điện áp trong cửa sổ nghỉ hiện tại
+  since: 0,           // mốc bắt đầu nghỉ
+  hold: null,         // % đã chốt từ lần nghỉ gần nhất
+  holdAt: 0,
+  hyst: 2,            // chốt lại chỉ khi lệch >= 2 % (tránh sửa qua sửa lại)
+  // dự phòng khi chưa từng có lần nghỉ nào (vd. mới mở web lúc đang sạc)
+  win: [], winMax: 9, ema: null, lastT: 0, tauMs: 180000,
+  shown: null, shownAt: 0, deadband: 1.5, minGapMs: 20000
+};
+
+function batIsResting() {
+  const b = D.battery, s = D.solar, st = D.device.status;
+  const v = Number(b.voltage) || 0;
+  return b.charging !== true                     // không sạc
+      && (Number(s.power) || 0) < 0.05           // panel gần như không phát
+      && REST_STATUS[st] === 1                   // servo đứng yên
+      && v > 5 && v < 9;                         // áp khối 2S hợp lệ
+}
+
+// Gom mẫu khi pin nghỉ -> chốt % OCV. Gọi mỗi giây (kể cả khi không có gói tin mới).
+function batRestTick(t = Date.now()) {
+  if (!batIsResting()) { BAT.since = 0; BAT.acc.length = 0; return; }
+  if (!BAT.since) BAT.since = t;
+  BAT.acc.push(Number(D.battery.voltage));
+  if (BAT.acc.length > 120) BAT.acc.shift();     // giữ tối đa 2 phút mẫu
+  if (t - BAT.since < BAT.needMs || BAT.acc.length < 20) return;
+
+  const a = BAT.acc.slice().sort((x, y) => x - y);
+  const med = a[(a.length - 1) >> 1];            // trung vị: bỏ mẫu dị thường
+  const cand = Math.round(ocvPercent(med));
+  if (BAT.hold === null || Math.abs(cand - BAT.hold) >= BAT.hyst) {
+    BAT.hold = cand;
+    BAT.holdAt = t;
+  }
+}
+
+function smoothPct(raw, t = Date.now()) {
+  const p = Number(raw);
+  if (!isFinite(p)) return null;
+  BAT.win.push(p);
+  if (BAT.win.length > BAT.winMax) BAT.win.shift();
+  const s = BAT.win.slice().sort((a, b) => a - b);
+  const med = s[(s.length - 1) >> 1];
+  if (BAT.ema === null) { BAT.ema = med; BAT.lastT = t; }
+  else {
+    const k = 1 - Math.exp(-Math.max(0, t - BAT.lastT) / BAT.tauMs);
+    BAT.ema += k * (med - BAT.ema);
+    BAT.lastT = t;
+  }
+  if (BAT.shown === null) BAT.shown = Math.round(BAT.ema);
+  else {
+    const diff = BAT.ema - BAT.shown;
+    if (Math.abs(diff) >= BAT.deadband && t - BAT.shownAt >= BAT.minGapMs) {
+      BAT.shown += Math.sign(diff);
+      BAT.shownAt = t;
+    }
+  }
+  return BAT.shown;
+}
+
+// Số % cuối cùng để hiển thị
+function batteryPct(raw, t = Date.now()) {
+  batRestTick(t);
+  let v = BAT.hold !== null ? BAT.hold : smoothPct(raw, t);
+  if (v === null) return null;
+  // Ràng buộc vật lý: đang sạc thì dung lượng không thể giảm.
+  // Chặn luôn kiểu 69 -> 63 -> 67 do servo rút dòng làm sụt áp.
+  if (D.battery.charging === true && BAT.shown !== null && v < BAT.shown) v = BAT.shown;
+  BAT.shown = v;
+  BAT.shownAt = BAT.shownAt || t;
+  return v;
+}
+
 // ============================================================================
 //  LOGIN
 // ============================================================================
@@ -144,6 +243,12 @@ function startListeners() {
     else if (grace) { pill.className = "pill off"; pill.textContent = "○ ĐANG KẾT NỐI"; }
     else { pill.className = "pill off"; pill.textContent = "○ MẤT KẾT NỐI"; }
     $("hdrClock").textContent = hhmmss(Date.now());
+    // lấy mẫu % pin mỗi giây, không phụ thuộc nhịp gói tin Firebase
+    const pctNow = batteryPct(D.battery.percentage);
+    if (pctNow !== null) {
+      $("bPct").textContent = pctNow + " %";
+      $("bBar").style.width = clamp(pctNow, 0, 100) + "%";
+    }
   }, 1000);
 
   pushChartLoop();
@@ -163,8 +268,9 @@ function render() {
   badge("sOk", dv.solarOk, "OK", "Lỗi INA219");
 
   $("bV").textContent = num(b.voltage, 2) + " V";
-  $("bPct").textContent = num(b.percentage, 0) + " %";
-  $("bBar").style.width = clamp(Number(b.percentage) || 0, 0, 100) + "%";
+  const pctShow = batteryPct(b.percentage);
+  $("bPct").textContent = pctShow === null ? "-- %" : pctShow + " %";
+  $("bBar").style.width = clamp(pctShow === null ? 0 : pctShow, 0, 100) + "%";
   $("bI").textContent = num(b.current, 2) + " A";
   const chg = b.charging === true;
   const bs = $("bStatus");
@@ -910,8 +1016,9 @@ setInterval(() => {
   $("anLiveBadge").style.color = on ? "var(--g)" : "var(--r)";
   const sn = D.sensors;
   const ldrTxt = sn.ldr1 !== undefined ? `${sn.ldr1}/${sn.ldr2}/${sn.ldr3}/${sn.ldr4}` : "--";
+  const pctLive = batteryPct(b.percentage);
   $("anLiveDetail").textContent =
-    `${L ? L.label : "--"} · LDR ${ldrTxt} · pin ${num(b.percentage, 0)}% · ${b.charging === true ? "đang sạc" : "không sạc"} · ${STATUS_VI[D.device.status] || D.device.status || "--"}`;
+    `${L ? L.label : "--"} · LDR ${ldrTxt} · pin ${pctLive === null ? "--" : pctLive}% · ${b.charging === true ? "đang sạc" : "không sạc"} · ${STATUS_VI[D.device.status] || D.device.status || "--"}`;
 }, 1000);
 
 // ============================================================================
