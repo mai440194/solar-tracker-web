@@ -221,8 +221,12 @@ function startListeners() {
     onValue(ref(db, DB_ROOT + "/" + k), (s) => {
       D[k] = s.val() || {};
       if (k === "device") {
-        const sig = Math.max(Number(D.device.lastUpdate) || 0, Number(D.device.uptimeSec) || 0);
-        if (sig && sig !== lastSig) { lastSig = sig; sigAt = Date.now(); }
+        const upd = Number(D.device.lastUpdate) || 0;          // epoch ms do ESP gửi (0 nếu chưa có NTP)
+        const sig = Math.max(upd, Number(D.device.uptimeSec) || 0);
+        // Chỉ coi là "vừa online" khi dữ liệu THẬT SỰ mới. Nếu không, mở trang lúc ESP đã chết
+        // vẫn báo ONLINE 6 giây rồi mới nhảy sang MẤT KẾT NỐI -> nhấp nháy sai.
+        const fresh = !upd || Math.abs(Date.now() - upd) < 15000;
+        if (sig && sig !== lastSig && fresh) { lastSig = sig; sigAt = Date.now(); }
       }
       render();
     }, (err) => console.warn("listen", k, err && err.message));
