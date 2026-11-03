@@ -155,6 +155,34 @@ table.hist tbody td:nth-child(1),
 table.hist tbody td:nth-child(5),
 table.hist tbody td:nth-child(8),
 table.hist tbody td:nth-child(9){border-right:1px solid var(--line)}
+
+/* ---------- MODAL CHỌN WIFI ---------- */
+.wmodal{position:fixed;inset:0;background:rgba(3,7,15,.72);backdrop-filter:blur(3px);
+display:flex;align-items:center;justify-content:center;z-index:60;padding:18px}
+.wmodal[hidden]{display:none}
+.wbox{width:100%;max-width:420px;background:var(--card);border:1px solid var(--line);border-radius:16px;
+box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;padding:16px;max-height:86vh}
+.whead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.whead h2{margin:0}
+.wbtns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.wstat{color:var(--mut);font-size:12.5px}
+.wstat.ok{color:var(--g);font-weight:600}
+.wstat.bad{color:var(--r);font-weight:600}
+.wlist{display:flex;flex-direction:column;gap:6px;overflow:auto;max-height:46vh;padding-right:2px}
+.wnet{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;
+background:var(--field);border:1px solid var(--line);border-radius:10px;padding:9px 12px;
+color:var(--txt);font:inherit;font-size:13px;cursor:pointer;text-align:left}
+.wnet:hover{border-color:var(--c)}
+.wnet.saved{border-color:rgba(34,197,94,.45)}
+.wssid{display:flex;align-items:center;gap:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wssid em{font-style:normal;font-size:11px;opacity:.85}
+.wssid .ck{color:var(--g);font-weight:700}
+.wsig{display:flex;align-items:flex-end;gap:2px;flex-shrink:0}
+.wsig i{display:block;width:3px;border-radius:2px;background:var(--line)}
+.wsig i.on{background:var(--g)}
+.wsig b{color:var(--mut);font-size:11px;margin-left:6px;font-weight:600}
+.wpass{display:flex;flex-direction:column;gap:10px;border-top:1px dashed var(--line);padding-top:12px}
+.wpass[hidden]{display:none}
 table.hist td.mut{color:var(--mut)}
 table.hist tbody td:only-child{text-align:center;border-right:0}
 table.hist tbody tr:hover{background:var(--field)}

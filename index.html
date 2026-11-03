@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Solar Tracker — ESP32 IoT Dashboard</title>
-  <link rel="stylesheet" href="styles.css?v=20">
+  <link rel="stylesheet" href="styles.css?v=21">
 </head>
 <body>
 
@@ -35,7 +35,7 @@
     </div>
     <div class="head-r">
       <span id="hdrPill" class="pill off">○ MẤT KẾT NỐI</span>
-      <span class="wifi">📶<b id="hdrRssi">--</b></span>
+      <button id="btnWifi" class="chip wifi" title="Chọn WiFi — quét và đổi mạng">📶<b id="hdrRssi">--</b></button>
       <button id="btnTheme" class="chip icon" title="Đổi giao diện sáng / tối">🌙</button>
       <button id="btnLogout" class="chip icon" title="Đăng xuất">⎋</button>
     </div>
@@ -217,6 +217,32 @@
   </section>
 </div>
 
-  <script type="module" src="app.js?v=20"></script>
+<!-- ==================== MODAL: CHỌN WIFI ==================== -->
+<div id="wifiModal" class="wmodal" hidden>
+  <div class="wbox">
+    <div class="whead">
+      <div>
+        <h2><span class="ico c">📶</span> Kết nối WiFi</h2>
+        <div class="sub" id="wifiCur">--</div>
+      </div>
+      <button id="wifiClose" class="chip icon" title="Đóng">✕</button>
+    </div>
+    <div class="wbtns">
+      <button id="wifiScan" class="chip">⟳ Quét lại</button>
+      <span id="wifiStat" class="wstat">--</span>
+    </div>
+    <div id="wifiList" class="wlist"></div>
+    <div id="wifiPass" class="wpass" hidden>
+      <label class="field"><span>Mật khẩu cho <b id="wifiSsid">--</b></span>
+        <input id="wifiPassInput" type="text" placeholder="mật khẩu WiFi" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      <div class="wbtns">
+        <button id="wifiConnect" class="apply" style="width:auto;padding:9px 18px">Kết nối</button>
+        <button id="wifiCancel" class="chip">Huỷ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <script type="module" src="app.js?v=21"></script>
 </body>
 </html>

@@ -1045,6 +1045,125 @@ window.addEventListener("resize", () => {
 });
 
 // ============================================================================
+//  CHỌN / ĐỔI WIFI TỪ XA  (icon 📶 trên header)
+//  Web ghi   control.wifiReq = {action:"scan"|"connect", ssid, pass, id}
+//  ESP ghi   /wifi = {state, id, ts, nets:[{s,r,e,v}], ssid, rssi, msg, cur:{...}}
+//  state: scanning -> scan_done | connecting -> ok | fail | online | offline
+// ============================================================================
+const W = { nets: [], state: "", ssid: "", msg: "", cur: {}, ts: 0 };
+let wPendingSsid = "";
+
+const hesc = (s) => String(s).replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function wifiModal(open) {
+  const m = $("wifiModal");
+  if (!m) return;
+  m.hidden = !open;
+  if (open) { wifiRender(); wifiAsk("scan"); }
+  else $("wifiPass").hidden = true;
+}
+
+// Gửi lệnh xuống ESP qua node control (id = Date.now() để ESP không chạy lại lệnh cũ)
+function wifiAsk(action, ssid, pass) {
+  const online = sigAt && Date.now() - sigAt < 6000;
+  if (!online) {
+    const el = $("wifiStat");
+    if (el) { el.textContent = "ESP đang offline — không gửi được lệnh."; el.className = "wstat bad"; }
+    return 0;
+  }
+  const req = { action, id: Date.now() };
+  if (ssid !== undefined) req.ssid = ssid;
+  if (pass !== undefined) req.pass = pass;
+  update(ref(db, DB_ROOT + "/control"), { wifiReq: req })
+    .catch((e) => console.warn("wifiReq", e && e.message));
+  return req.id;
+}
+
+function wifiBars(rssi) {
+  const r = Number(rssi) || -100;
+  const n = r >= -55 ? 4 : r >= -67 ? 3 : r >= -78 ? 2 : 1;
+  let s = "";
+  for (let i = 0; i < 4; i++) s += `<i class="${i < n ? "on" : ""}" style="height:${4 + i * 3}px"></i>`;
+  return `<span class="wsig">${s}<b>${r}</b></span>`;
+}
+
+function wifiRender() {
+  if (!$("wifiList")) return;
+  const cur = W.cur || {};
+  $("wifiCur").textContent = cur.ok
+    ? `Đang kết nối: ${cur.ssid} · ${cur.rssi} dBm · ${cur.saved || 0} mạng đã lưu`
+    : `ESP chưa vào mạng nào · ${cur.saved || 0} mạng đã lưu`;
+
+  const TXT = {
+    scanning: "Đang quét WiFi…",
+    scan_done: `Tìm thấy ${W.nets.length} mạng`,
+    connecting: `Đang kết nối ${W.ssid}…`,
+    ok: `✔ Đã kết nối ${W.ssid}`,
+    fail: `✖ ${W.msg || "thất bại"}${W.ssid ? " (" + W.ssid + ")" : ""}`,
+    online: "ESP đang online",
+    offline: "ESP đang offline",
+  };
+  const st = $("wifiStat");
+  st.textContent = TXT[W.state] || "--";
+  st.className = "wstat" + (W.state === "ok" ? " ok" : W.state === "fail" ? " bad" : "");
+
+  const box = $("wifiList");
+  if (W.state === "scanning" && !W.nets.length) { box.innerHTML = `<div class="msg">Đang quét…</div>`; return; }
+  if (!W.nets.length) { box.innerHTML = `<div class="msg">Chưa có kết quả quét.</div>`; return; }
+  box.innerHTML = W.nets.map((n) => {
+    const saved = Number(n.v) === 1;
+    return `<button class="wnet${saved ? " saved" : ""}" data-s="${encodeURIComponent(n.s)}" data-v="${saved ? 1 : 0}">
+      <span class="wssid">${saved ? '<em class="ck">✓</em>' : ""}${hesc(n.s)}${n.e ? '<em class="lk">🔒</em>' : ""}</span>
+      ${wifiBars(n.r)}</button>`;
+  }).join("");
+}
+
+function wifiPick(ssid, saved) {
+  wPendingSsid = ssid;
+  $("wifiSsid").textContent = ssid;
+  if (saved) {                    // mạng đã lưu -> ESP tự dùng mật khẩu trong NVS
+    $("wifiPass").hidden = true;
+    wifiAsk("connect", ssid, "");
+  } else {
+    $("wifiPass").hidden = false;
+    $("wifiPassInput").value = "";
+    $("wifiPassInput").focus();
+  }
+}
+
+onValue(ref(db, DB_ROOT + "/wifi"), (s) => {
+  const v = s.val() || {};
+  W.state = v.state || "";
+  W.cur = v.cur || {};
+  W.ts = Number(v.ts) || 0;
+  W.msg = v.msg || "";
+  if (v.ssid) W.ssid = v.ssid;
+  if (v.nets) W.nets = Array.isArray(v.nets) ? v.nets : Object.values(v.nets);
+  else if (v.state === "scan_done") W.nets = [];
+  wifiRender();
+}, (err) => console.warn("listen wifi", err && err.message));
+
+$("btnWifi").addEventListener("click", () => wifiModal($("wifiModal").hidden));
+$("wifiClose").addEventListener("click", () => wifiModal(false));
+$("wifiModal").addEventListener("click", (e) => { if (e.target.id === "wifiModal") wifiModal(false); });
+$("wifiScan").addEventListener("click", () => { W.nets = []; wifiRender(); wifiAsk("scan"); });
+$("wifiCancel").addEventListener("click", () => { $("wifiPass").hidden = true; });
+$("wifiConnect").addEventListener("click", () => {
+  if (!wPendingSsid) return;
+  wifiAsk("connect", wPendingSsid, $("wifiPassInput").value);
+  $("wifiPass").hidden = true;
+});
+$("wifiPassInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); $("wifiConnect").click(); }
+});
+$("wifiList").addEventListener("click", (e) => {
+  const b = e.target.closest(".wnet");
+  if (!b) return;
+  wifiPick(decodeURIComponent(b.dataset.s), b.dataset.v === "1");
+});
+
+// ============================================================================
 //  BOOT
 // ============================================================================
 if (sessionStorage.getItem(AUTH_KEY) === "1") showApp();
