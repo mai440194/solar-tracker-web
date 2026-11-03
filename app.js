@@ -1100,6 +1100,7 @@ function wifiRender() {
     scan_done: `Tìm thấy ${W.nets.length} mạng`,
     connecting: `Đang kết nối ${W.ssid}…`,
     ok: `✔ Đã kết nối ${W.ssid}`,
+    forgot: `🗑 Đã quên ${W.ssid}`,
     fail: `✖ ${W.msg || "thất bại"}${W.ssid ? " (" + W.ssid + ")" : ""}`,
     online: "ESP đang online",
     offline: "ESP đang offline",
@@ -1111,15 +1112,29 @@ function wifiRender() {
   const box = $("wifiList");
   if (W.state === "scanning" && !W.nets.length) { box.innerHTML = `<div class="msg">Đang quét…</div>`; return; }
   if (!W.nets.length) { box.innerHTML = `<div class="msg">Chưa có kết quả quét.</div>`; return; }
+
+  // Ba trạng thái phải khác nhau RÕ: đang dùng (xanh đậm) / đã lưu (viền xanh nhạt) / chưa lưu
+  const curSsid = cur.ok ? (cur.ssid || "") : "";
   box.innerHTML = W.nets.map((n) => {
     const saved = Number(n.v) === 1;
-    return `<button class="wnet${saved ? " saved" : ""}" data-s="${encodeURIComponent(n.s)}" data-v="${saved ? 1 : 0}">
-      <span class="wssid">${saved ? '<em class="ck">✓</em>' : ""}${hesc(n.s)}${n.e ? '<em class="lk">🔒</em>' : ""}</span>
-      ${wifiBars(n.r)}</button>`;
+    const isCur = saved && n.s === curSsid;
+    const tag = isCur ? '<em class="tag cur">● ĐANG DÙNG</em>'
+              : saved ? '<em class="tag sav">Đã lưu</em>' : "";
+    const del = (saved && !isCur)
+      ? `<button class="wdel" data-f="${encodeURIComponent(n.s)}" title="Quên mạng này">🗑</button>` : "";
+    return `<div class="wrow">
+      <button class="wnet${isCur ? " cur" : saved ? " sav" : ""}" data-s="${encodeURIComponent(n.s)}" data-v="${saved ? 1 : 0}"${isCur ? ' data-cur="1"' : ""}>
+        <span class="wssid"><span class="nm">${hesc(n.s)}</span>${n.e ? '<em class="lk">🔒</em>' : ""}${tag}</span>
+        ${wifiBars(n.r)}</button>${del}</div>`;
   }).join("");
 }
 
-function wifiPick(ssid, saved) {
+function wifiPick(ssid, saved, isCur) {
+  if (isCur) {                    // bấm vào mạng đang dùng -> không làm gì
+    const st = $("wifiStat");
+    if (st) { st.textContent = `✔ ${ssid} — đang kết nối`; st.className = "wstat ok"; }
+    return;
+  }
   wPendingSsid = ssid;
   $("wifiSsid").textContent = ssid;
   if (saved) {                    // mạng đã lưu -> ESP tự dùng mật khẩu trong NVS
@@ -1158,9 +1173,20 @@ $("wifiPassInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); $("wifiConnect").click(); }
 });
 $("wifiList").addEventListener("click", (e) => {
+  const d = e.target.closest(".wdel");
+  if (d) {                        // quên mạng đã lưu
+    const s = decodeURIComponent(d.dataset.f);
+    if (!confirm(`Quên mạng "${s}"?\nESP sẽ không tự kết nối lại mạng này nữa.`)) return;
+    if (wifiAsk("forget", s, "")) {
+      W.nets = W.nets.map((n) => (n.s === s ? { ...n, v: 0 } : n));
+      W.state = "forgot"; W.ssid = s; W.msg = "";
+      wifiRender();
+    }
+    return;
+  }
   const b = e.target.closest(".wnet");
   if (!b) return;
-  wifiPick(decodeURIComponent(b.dataset.s), b.dataset.v === "1");
+  wifiPick(decodeURIComponent(b.dataset.s), b.dataset.v === "1", b.dataset.cur === "1");
 });
 
 // ============================================================================

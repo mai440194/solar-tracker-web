@@ -169,14 +169,27 @@ box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;padding:16p
 .wstat.ok{color:var(--g);font-weight:600}
 .wstat.bad{color:var(--r);font-weight:600}
 .wlist{display:flex;flex-direction:column;gap:6px;overflow:auto;max-height:46vh;padding-right:2px}
+.wrow{display:flex;gap:6px;align-items:stretch}
+.wrow .wnet{flex:1;min-width:0}
 .wnet{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;
 background:var(--field);border:1px solid var(--line);border-radius:10px;padding:9px 12px;
 color:var(--txt);font:inherit;font-size:13px;cursor:pointer;text-align:left}
 .wnet:hover{border-color:var(--c)}
-.wnet.saved{border-color:rgba(34,197,94,.45)}
-.wssid{display:flex;align-items:center;gap:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.wssid em{font-style:normal;font-size:11px;opacity:.85}
-.wssid .ck{color:var(--g);font-weight:700}
+/* ĐÃ LƯU nhưng không phải mạng đang dùng: viền xanh nhạt */
+.wnet.sav{border-color:rgba(34,197,94,.30)}
+/* ĐANG DÙNG: nền + viền xanh đậm, không thể nhầm */
+.wnet.cur{border-color:rgba(34,197,94,.95);background:rgba(34,197,94,.12);
+box-shadow:inset 0 0 0 1px rgba(34,197,94,.35)}
+.wssid{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;white-space:nowrap}
+.wssid .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wssid em{font-style:normal;font-size:11px;opacity:.85;flex-shrink:0}
+.wssid .tag{flex-shrink:0;font-size:9.5px;font-weight:700;letter-spacing:.03em;
+padding:1.5px 7px;border-radius:999px;border:1px solid transparent}
+.wssid .tag.cur{background:var(--g);color:#04220f}
+.wssid .tag.sav{color:var(--g);border-color:rgba(34,197,94,.45);font-weight:600}
+.wdel{flex:0 0 36px;background:var(--field);border:1px solid var(--line);border-radius:10px;
+color:var(--mut);font-size:13px;cursor:pointer;line-height:1}
+.wdel:hover{border-color:var(--r);color:var(--r)}
 .wsig{display:flex;align-items:flex-end;gap:2px;flex-shrink:0}
 .wsig i{display:block;width:3px;border-radius:2px;background:var(--line)}
 .wsig i.on{background:var(--g)}
